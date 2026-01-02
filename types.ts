@@ -59,6 +59,8 @@ export interface VideoTelemetry {
   endCS: number;
   frictionEvents: FrictionEvent[];
   summary: string;
+  rgeTimeline: { timestamp: number, value: number }[]; // RGE data points over the video duration
+  suggestedItems: string[]; // Names of items suggested by the audit
   mathMetrics: {
     rgeEstimate: number;
     velocityHz: number;
