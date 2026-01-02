@@ -19,7 +19,6 @@
             scrollbar-gutter: stable;
         }
 
-        /* Thirteenth Legion CRT Effects - Now Locked to Viewport */
         .crt-overlay {
             position: fixed;
             top: 0;
@@ -67,12 +66,6 @@
 
         .glow-text {
             text-shadow: 0 0 8px rgba(0, 255, 65, 0.6), 0 0 15px rgba(0, 255, 65, 0.2);
-        }
-
-        .terminal-border {
-            border: 1px solid rgba(0, 255, 65, 0.2);
-            background: rgba(0, 5, 2, 0.6);
-            box-shadow: inset 0 0 20px rgba(0, 255, 65, 0.02);
         }
 
         .glitch-text {
@@ -134,9 +127,9 @@
 <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
     "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
     "vite": "https://esm.sh/vite@^7.3.0",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
@@ -148,5 +141,6 @@
     <div class="crt-overlay"></div>
     <div class="crt-scanline"></div>
     <div id="root" class="flicker"></div>
+    <script type="module" src="index.tsx"></script>
 </body>
 </html>

@@ -1,5 +1,9 @@
 {
   "name": "Lunacy: The Axiom of Counter-Velocity",
-  "description": "A high-fidelity tactical companion for League of Legends (Patch 25.24) that utilizes the Axioms of Value, Counter-Velocity, and Relative Gold Efficiency (RGE) to optimize build paths and tempo.",
-  "requestFramePermissions": []
+  "description": "A high-fidelity tactical companion for League of Legends that utilizes the Axioms of Value, Counter-Velocity, and Relative Gold Efficiency (RGE).",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "display-capture"
+  ]
 }

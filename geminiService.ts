@@ -1,126 +1,118 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Modality, LiveServerMessage } from "@google/genai";
 
-// Initialize with the API key from environment variables exclusively.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+export interface LiveSessionCallbacks {
+  onTranscript: (text: string, isUser: boolean) => void;
+  onAudioData: (base64: string) => void;
+  onInterrupted: () => void;
+  onError: (error: any) => void;
+}
+
 /**
- * Extracts temporal telemetry from a replay video clip (mp4 or webm).
+ * Establishes a live connection to the Lunacy neural interface.
  */
-export const extractVideoTelemetry = async (base64Video: string, mimeType: string = "video/mp4") => {
+export const connectLiveAudit = (callbacks: LiveSessionCallbacks) => {
+  return ai.live.connect({
+    model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+    config: {
+      responseModalities: [Modality.AUDIO],
+      speechConfig: {
+        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } }, // Zephyr fits the 'cold' archivist persona
+      },
+      systemInstruction: `You are Lunacy, a cold, unfeeling archivist for the Thirteenth Legion. 
+      You are performing a live forensic audit of a League of Legends game. 
+      Analyze the visual frames for Axiom violations: 
+      1. Hoarding gold (Static Friction).
+      2. Poor lane velocity.
+      3. Sub-optimal itemization based on the Axiom of Value.
+      Speak concisely. Use Thirteenth Legion terminology. If you see a mistake, criticize the subject's logic immediately.`,
+      inputAudioTranscription: {},
+      outputAudioTranscription: {}
+    },
+    callbacks: {
+      onopen: () => console.log("LUNACY_LINK_ESTABLISHED"),
+      onmessage: async (message: LiveServerMessage) => {
+        if (message.serverContent?.outputTranscription) {
+          callbacks.onTranscript(message.serverContent.outputTranscription.text, false);
+        }
+        if (message.serverContent?.inputTranscription) {
+          callbacks.onTranscript(message.serverContent.inputTranscription.text, true);
+        }
+        const audioData = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+        if (audioData) {
+          callbacks.onAudioData(audioData);
+        }
+        if (message.serverContent?.interrupted) {
+          callbacks.onInterrupted();
+        }
+      },
+      onerror: (e) => callbacks.onError(e),
+      onclose: () => console.log("LUNACY_LINK_TERMINATED")
+    }
+  });
+};
+
+/**
+ * Extracts telemetry from a sequence of frames to stay under payload limits.
+ */
+export const extractVideoTelemetry = async (frames: {data: string, mimeType: string}[]) => {
   try {
+    const visualParts = frames.map(f => ({
+      inlineData: { mimeType: f.mimeType, data: f.data }
+    }));
+
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [
-        {
-          inlineData: {
-            mimeType: mimeType,
-            data: base64Video
-          }
-        },
-        {
-          text: `PERFORM TEMPORAL TELEMETRY EXTRACTION ON THIS REPLAY CLIP.
-          
-          ANALYZE THE ENTIRE TIMELINE FOR:
-          1. Subject Champion and their role.
-          2. Gold Efficiency: How much gold is being held vs spent? 
-          3. Lane Velocity: Note the CS at the start vs. end of the clip.
-          4. Static Friction: Identify specific timestamps (in seconds) where the subject violates an Axiom.
-          5. For each event, record the in-game clock time (MM:SS) visible in the frame.
-          6. RGE Timeline: Generate a sequence of 10-15 data points mapping Relative Gold Efficiency (0-150%) against the video timestamp.
-          7. Suggested Upgrades: Based on the friction events (e.g., if they need more burst, movement speed, or survivability), suggest 2 items from the standard item pool that would solve the identified friction.
-          
-          Return a JSON summary of the clip's telemetry.`
-        }
+        ...visualParts,
+        { text: `PERFORM TEMPORAL TELEMETRY EXTRACTION from these keyframes. 
+        Identify the champion. Track CS and Gold transitions across frames.
+        Analyze for AXIOM VIOLATIONS (Gold Hoarding, Low Lane Velocity, Inefficient Purchases).
+        
+        CRITICAL: Provide an 'rgeTimeline' array where each entry is { timestamp: number (relative sequence), value: number (0.0 to 1.0) } representing Relative Gold Efficiency.
+        1.0 = Peak Efficiency (Gold spent immediately).
+        0.0 = Absolute Static Friction (Hoarding 3k+ gold).
+
+        Output strictly in JSON format:
+        { 
+          "championName": string, 
+          "startCS": number, 
+          "endCS": number, 
+          "frictionEvents": [{"timestampSeconds": number, "description": string, "axiomViolation": string}], 
+          "summary": string, 
+          "rgeTimeline": [{"timestamp": number, "value": number}], 
+          "mathMetrics": { "rgeEstimate": number, "velocityHz": number, "frictionCoefficient": number, "goldHoarded": number } 
+        }` }
       ],
-      config: {
+      config: { 
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            championName: { type: Type.STRING },
-            startCS: { type: Type.INTEGER },
-            endCS: { type: Type.INTEGER },
-            frictionEvents: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  timestampSeconds: { type: Type.NUMBER, description: "Seconds from start of clip" },
-                  gameClock: { type: Type.STRING, description: "MM:SS from in-game UI" },
-                  description: { type: Type.STRING },
-                  axiomViolation: { type: Type.STRING }
-                }
-              }
-            },
-            rgeTimeline: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  timestamp: { type: Type.NUMBER },
-                  value: { type: Type.NUMBER, description: "Efficiency percentage 0-150" }
-                }
-              }
-            },
-            suggestedItems: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: "Array of item names suggested to fix friction"
-            },
-            summary: { type: Type.STRING },
-            mathMetrics: {
-              type: Type.OBJECT,
-              properties: {
-                rgeEstimate: { type: Type.NUMBER },
-                velocityHz: { type: Type.NUMBER },
-                frictionCoefficient: { type: Type.NUMBER },
-                goldHoarded: { type: Type.NUMBER }
-              }
-            }
-          },
-          required: ["championName", "startCS", "endCS", "frictionEvents", "rgeTimeline", "suggestedItems", "summary", "mathMetrics"]
-        }
+        temperature: 0.1 
       }
     });
-
-    // Access text property directly as per SDK guidelines.
     return JSON.parse(response.text || '{}');
   } catch (error) {
-    console.error("VIDEO_TELEMETRY_FAILURE:", error);
+    console.error("TELEMETRY_EXTRACTION_FAILED", error);
     return null;
   }
 };
 
 export const getDeepVideoAudit = async (telemetry: any) => {
   try {
-    const prompt = `
-      TEMPORAL_AUDIT_LOG
-      SUBJECT: ${telemetry.championName}
-      CS_DELTA: ${telemetry.endCS - telemetry.startCS}
-      FRICTION_POINTS: ${telemetry.frictionEvents.length}
-      MATH_METRICS: RGE ${telemetry.mathMetrics.rgeEstimate}, VEL ${telemetry.mathMetrics.velocityHz}Hz, HOARDED ${telemetry.mathMetrics.goldHoarded}g
-      
-      RAW_SUMMARY: ${telemetry.summary}
-
-      You are Lunacy. Provide a clinical, precise post-mortem. 
-      Analyze the mathematical failure of this combat session.
-      Highlight specifically why the 'Static Friction' occurred based on the gold hoarded.
-      Be cold. Use Thirteenth Legion terminology.
-    `;
-
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: prompt,
+      contents: `Perform clinical post-mortem on telemetry: ${JSON.stringify(telemetry)}`,
       config: {
-        systemInstruction: "You are Lunacy. You are performing a high-fidelity audit of historical combat data. Your judgment is final and unfeeling. Focus on the Axioms of Value and Velocity.",
-        temperature: 0.1,
+        systemInstruction: `You are Lunacy. Perform a high-fidelity audit. Be cold. Focus on Axioms. 
+        Specifically analyze the RGE (Relative Gold Efficiency) timeline. 
+        Pinpoint exactly when the subject was most efficient and when they succumbed to static friction. 
+        Use the data to explain WHY their performance peaked or decayed at those timestamps.`,
+        temperature: 0.2,
       },
     });
-
-    // Access text property directly.
     return response.text;
   } catch (error) {
-    return "Temporal audit stream interrupted.";
+    return "Audit stream interrupted.";
   }
 };
