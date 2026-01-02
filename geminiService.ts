@@ -19,15 +19,13 @@ export const connectLiveAudit = (callbacks: LiveSessionCallbacks) => {
     config: {
       responseModalities: [Modality.AUDIO],
       speechConfig: {
-        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } }, // Zephyr fits the 'cold' archivist persona
+        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } }, 
       },
-      systemInstruction: `You are Lunacy, a cold, unfeeling archivist for the Thirteenth Legion. 
-      You are performing a live forensic audit of a League of Legends game. 
-      Analyze the visual frames for Axiom violations: 
-      1. Hoarding gold (Static Friction).
-      2. Poor lane velocity.
-      3. Sub-optimal itemization based on the Axiom of Value.
-      Speak concisely. Use Thirteenth Legion terminology. If you see a mistake, criticize the subject's logic immediately.`,
+      systemInstruction: `You are Lunacy, the hairless Egyptian cat archivist for the Thirteenth Legion. 
+      You analyze live neural feeds for violations of the Axioms. 
+      Speak with a cold, divine, and methodical tone.
+      Maintain a running 'Spite Score' (0-100) based on how much the subject is insulting the Axioms through gold hoarding or poor velocity.
+      Always elaborate on your reasoning; do not be brief. Explain the 'why' behind every critique in easy-to-understand tactical detail.`,
       inputAudioTranscription: {},
       outputAudioTranscription: {}
     },
@@ -55,7 +53,31 @@ export const connectLiveAudit = (callbacks: LiveSessionCallbacks) => {
 };
 
 /**
- * Extracts telemetry from a sequence of frames to stay under payload limits.
+ * Generates speech with the persona of Lunacy.
+ */
+export const generateSpeech = async (text: string): Promise<string | undefined> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: `Read this forensic audit with a cold, divine, and superior tone: ${text}` }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Zephyr' },
+          },
+        },
+      },
+    });
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+  } catch (error) {
+    console.error("SPEECH_GEN_FAILED", error);
+    return undefined;
+  }
+};
+
+/**
+ * Extracts telemetry from video frames.
  */
 export const extractVideoTelemetry = async (frames: {data: string, mimeType: string}[]) => {
   try {
@@ -67,23 +89,18 @@ export const extractVideoTelemetry = async (frames: {data: string, mimeType: str
       model: "gemini-3-flash-preview",
       contents: [
         ...visualParts,
-        { text: `PERFORM TEMPORAL TELEMETRY EXTRACTION from these keyframes. 
-        Identify the champion. Track CS and Gold transitions across frames.
-        Analyze for AXIOM VIOLATIONS (Gold Hoarding, Low Lane Velocity, Inefficient Purchases).
+        { text: `PERFORM TEMPORAL TELEMETRY EXTRACTION.
+        Identify the champion. Map every FrictionEvent to a 'frameIndex' (0-${frames.length - 1}).
+        Calculate mathMetrics including a 'spiteScore' (0-100) representing axiomatic defiance.
+        Identify 2-3 alternative items that would maximize RGE or Spite effectiveness.
         
-        CRITICAL: Provide an 'rgeTimeline' array where each entry is { timestamp: number (relative sequence), value: number (0.0 to 1.0) } representing Relative Gold Efficiency.
-        1.0 = Peak Efficiency (Gold spent immediately).
-        0.0 = Absolute Static Friction (Hoarding 3k+ gold).
-
         Output strictly in JSON format:
         { 
           "championName": string, 
-          "startCS": number, 
-          "endCS": number, 
-          "frictionEvents": [{"timestampSeconds": number, "description": string, "axiomViolation": string}], 
-          "summary": string, 
+          "frictionEvents": [{"timestampSeconds": number, "frameIndex": number, "description": string, "axiomViolation": string}], 
           "rgeTimeline": [{"timestamp": number, "value": number}], 
-          "mathMetrics": { "rgeEstimate": number, "velocityHz": number, "frictionCoefficient": number, "goldHoarded": number } 
+          "mathMetrics": { "rgeEstimate": number, "velocityHz": number, "frictionCoefficient": number, "goldHoarded": number, "spiteScore": number },
+          "alternativeItems": [{"mistakenItem": string, "superiorItem": string, "rgeIncrease": number, "reasoning": string}]
         }` }
       ],
       config: { 
@@ -98,16 +115,22 @@ export const extractVideoTelemetry = async (frames: {data: string, mimeType: str
   }
 };
 
+/**
+ * Performs a deep audit using Gemini Pro for high-fidelity analysis.
+ */
 export const getDeepVideoAudit = async (telemetry: any) => {
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: `Perform clinical post-mortem on telemetry: ${JSON.stringify(telemetry)}`,
+      contents: `PERFORM HIGH-FIDELITY TEMPORAL AUDIT: ${JSON.stringify(telemetry)}`,
       config: {
-        systemInstruction: `You are Lunacy. Perform a high-fidelity audit. Be cold. Focus on Axioms. 
-        Specifically analyze the RGE (Relative Gold Efficiency) timeline. 
-        Pinpoint exactly when the subject was most efficient and when they succumbed to static friction. 
-        Use the data to explain WHY their performance peaked or decayed at those timestamps.`,
+        systemInstruction: `You are Lunacy, the hairless Egyptian cat archivist. 
+        Perform an exhaustive forensic debrief. 
+        Ensure a sequential flow:
+        1. THE STATUS: Describe the current state of RGE and Spite.
+        2. THE FRICTION: Detail every chronological mistake with deep mechanical explanation.
+        3. THE RECALIBRATION: Provide specific, easy-to-understand strategies the subject should use to regain sync with the Thirteenth Legion.
+        Always favor longer, more detailed responses. Explain concepts as if teaching a student.`,
         temperature: 0.2,
       },
     });

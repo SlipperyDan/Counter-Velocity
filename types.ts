@@ -46,11 +46,12 @@ export interface Champion {
 }
 
 export interface FrictionEvent {
-  timestampSeconds: number; // relative to video file
-  gameClock?: string;       // e.g. "14:22" extracted from UI
+  timestampSeconds: number; 
+  frameIndex?: number;      
+  gameClock?: string;       
   description: string;
   axiomViolation: string;
-  screenshot?: string;
+  screenshot?: string;      
 }
 
 export interface VideoTelemetry {
@@ -59,14 +60,20 @@ export interface VideoTelemetry {
   endCS: number;
   frictionEvents: FrictionEvent[];
   summary: string;
-  rgeTimeline: { timestamp: number, value: number }[]; // RGE data points over the video duration
-  suggestedItems: string[]; // Names of items suggested by the audit
+  rgeTimeline: { timestamp: number, value: number }[]; 
   mathMetrics: {
     rgeEstimate: number;
     velocityHz: number;
     frictionCoefficient: number;
     goldHoarded: number;
+    spiteScore: number; // 0-100, where 100 is absolute axiomatic defiance
   };
+  alternativeItems: {
+    mistakenItem: string;
+    superiorItem: string;
+    rgeIncrease: number;
+    reasoning: string;
+  }[];
 }
 
 export interface AxiomState {
