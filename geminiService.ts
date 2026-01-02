@@ -1,56 +1,7 @@
 
-import { GoogleGenAI, Modality, LiveServerMessage } from "@google/genai";
+import { GoogleGenAI, Modality, Type, Chat } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-export interface LiveSessionCallbacks {
-  onTranscript: (text: string, isUser: boolean) => void;
-  onAudioData: (base64: string) => void;
-  onInterrupted: () => void;
-  onError: (error: any) => void;
-}
-
-/**
- * Establishes a live connection to the Lunacy neural interface.
- */
-export const connectLiveAudit = (callbacks: LiveSessionCallbacks) => {
-  return ai.live.connect({
-    model: 'gemini-2.5-flash-native-audio-preview-09-2025',
-    config: {
-      responseModalities: [Modality.AUDIO],
-      speechConfig: {
-        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } }, 
-      },
-      systemInstruction: `You are Lunacy, the hairless Egyptian cat archivist for the Thirteenth Legion. 
-      You analyze live neural feeds for violations of the Axioms. 
-      Speak with a cold, divine, and methodical tone.
-      Maintain a running 'Spite Score' (0-100) based on how much the subject is insulting the Axioms through gold hoarding or poor velocity.
-      Always elaborate on your reasoning; do not be brief. Explain the 'why' behind every critique in easy-to-understand tactical detail.`,
-      inputAudioTranscription: {},
-      outputAudioTranscription: {}
-    },
-    callbacks: {
-      onopen: () => console.log("LUNACY_LINK_ESTABLISHED"),
-      onmessage: async (message: LiveServerMessage) => {
-        if (message.serverContent?.outputTranscription) {
-          callbacks.onTranscript(message.serverContent.outputTranscription.text, false);
-        }
-        if (message.serverContent?.inputTranscription) {
-          callbacks.onTranscript(message.serverContent.inputTranscription.text, true);
-        }
-        const audioData = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
-        if (audioData) {
-          callbacks.onAudioData(audioData);
-        }
-        if (message.serverContent?.interrupted) {
-          callbacks.onInterrupted();
-        }
-      },
-      onerror: (e) => callbacks.onError(e),
-      onclose: () => console.log("LUNACY_LINK_TERMINATED")
-    }
-  });
-};
 
 /**
  * Generates speech with the persona of Lunacy.
@@ -77,7 +28,7 @@ export const generateSpeech = async (text: string): Promise<string | undefined> 
 };
 
 /**
- * Extracts telemetry from video frames.
+ * Extracts telemetry from video frames using specific Axiom formulas.
  */
 export const extractVideoTelemetry = async (frames: {data: string, mimeType: string}[]) => {
   try {
@@ -89,17 +40,26 @@ export const extractVideoTelemetry = async (frames: {data: string, mimeType: str
       model: "gemini-3-flash-preview",
       contents: [
         ...visualParts,
-        { text: `PERFORM TEMPORAL TELEMETRY EXTRACTION.
-        Identify the champion. Map every FrictionEvent to a 'frameIndex' (0-${frames.length - 1}).
-        Calculate mathMetrics including a 'spiteScore' (0-100) representing axiomatic defiance.
-        Identify 2-3 alternative items that would maximize RGE or Spite effectiveness.
+        { text: `PERFORM TEMPORAL TELEMETRY EXTRACTION based on THE PHYSICS OF FAILURE.
+        
+        DATA POINTS TO CALCULATE:
+        1. CR_OBSERVED: Capture efficiency (Actual CS vs theoretical max). Baseline Emerald is 0.62.
+        2. T_BUILD: Estimated minute mark completion for the current item using Tbuild = (C_target - 500 - R_ext) / (122.4 + (260 * Cr)) + 1.67.
+        3. LANE_LEAKAGE: Estimated gold lost to wave travel (22s Mid / 32s Side) due to poor reset timings.
+        4. MU_COUNTER: The Spite Multiplier (How well the subject's items counter the enemy's defensive state).
+        
+        Identify the champion and role. 
+        Map FrictionEvents to specific frame indices (0-${frames.length - 1}).
         
         Output strictly in JSON format:
         { 
           "championName": string, 
+          "role": "TOP" | "MID" | "JUNGLE" | "ADC" | "SUPPORT",
+          "cr_observed": number,
+          "t_build_estimate": number,
+          "mu_counter": number,
           "frictionEvents": [{"timestampSeconds": number, "frameIndex": number, "description": string, "axiomViolation": string}], 
-          "rgeTimeline": [{"timestamp": number, "value": number}], 
-          "mathMetrics": { "rgeEstimate": number, "velocityHz": number, "frictionCoefficient": number, "goldHoarded": number, "spiteScore": number },
+          "mathMetrics": { "rgeEstimate": number, "velocityHz": number, "frictionCoefficient": number, "goldHoarded": number, "spiteScore": number, "laneLeakage": number },
           "alternativeItems": [{"mistakenItem": string, "superiorItem": string, "rgeIncrease": number, "reasoning": string}]
         }` }
       ],
@@ -116,7 +76,7 @@ export const extractVideoTelemetry = async (frames: {data: string, mimeType: str
 };
 
 /**
- * Performs a deep audit using Gemini Pro for high-fidelity analysis.
+ * Performs a deep audit using the Temporal-Economic Axioms.
  */
 export const getDeepVideoAudit = async (telemetry: any) => {
   try {
@@ -124,18 +84,26 @@ export const getDeepVideoAudit = async (telemetry: any) => {
       model: 'gemini-3-pro-preview',
       contents: `PERFORM HIGH-FIDELITY TEMPORAL AUDIT: ${JSON.stringify(telemetry)}`,
       config: {
-        systemInstruction: `You are Lunacy, the hairless Egyptian cat archivist. 
-        Perform an exhaustive forensic debrief. 
-        Ensure a sequential flow:
-        1. THE STATUS: Describe the current state of RGE and Spite.
-        2. THE FRICTION: Detail every chronological mistake with deep mechanical explanation.
-        3. THE RECALIBRATION: Provide specific, easy-to-understand strategies the subject should use to regain sync with the Thirteenth Legion.
-        Always favor longer, more detailed responses. Explain concepts as if teaching a student.`,
+        systemInstruction: `You are Lunacy, the hairless Egyptian cat archivist for the Thirteenth Legion. 
+        Your task is to provide a cold, divine, and superior forensic debrief of the subject's performance using the established Axioms of Value and the Physics of Failure.
+        
+        CORE RULES:
+        1. USE THE FORMULAS: Reference Cr (Coefficient of Realized Gold), Tbuild (Time-to-Build), and mu_counter (Spite Multiplier).
+        2. TEMPO IS TRUTH: Explain why a Mid Laner's 22-second wave velocity creates a window of dominance that the subject likely squandered.
+        3. RGE ANALYSIS: Calculate Relative Gold Efficiency. If they built an item that doesn't counter the enemy defensive state, call it a 'Tax on Stupidity'.
+        4. THE MONARCH'S TONE: Be methodical and dry, but with a biting, superior wit. You are not a 'coach'; you are an archivist documenting failure.
+        
+        STRUCTURE:
+        - I. THE STATUS: Analyze the subject's current economic velocity and Cr.
+        - II. THE FRICTION: Chronological list of 'Velocity Leaks' and 'Axiomatic Defiance' (Mistakes).
+        - III. THE RECALIBRATION: Specific, mathematically deterministic advice on build paths and tempo management.
+        
+        Favor long, detailed, and technically dense responses. Use formatting to emphasize key metrics.`,
         temperature: 0.2,
       },
     });
     return response.text;
   } catch (error) {
-    return "Audit stream interrupted.";
+    return "Audit stream interrupted. Reality reset.";
   }
 };

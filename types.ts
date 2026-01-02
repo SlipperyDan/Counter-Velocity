@@ -56,17 +56,18 @@ export interface FrictionEvent {
 
 export interface VideoTelemetry {
   championName: string;
-  startCS: number;
-  endCS: number;
+  role: Role;
+  cr_observed: number; // Coefficient of Realized Gold (0.0 - 1.0)
+  t_build_estimate: number; // Minute mark for current item completion
+  mu_counter: number; // Spite/Counter Multiplier observed
   frictionEvents: FrictionEvent[];
-  summary: string;
-  rgeTimeline: { timestamp: number, value: number }[]; 
   mathMetrics: {
     rgeEstimate: number;
     velocityHz: number;
     frictionCoefficient: number;
     goldHoarded: number;
-    spiteScore: number; // 0-100, where 100 is absolute axiomatic defiance
+    spiteScore: number;
+    laneLeakage: number; // Gold lost to travel velocity (22s/32s rule)
   };
   alternativeItems: {
     mistakenItem: string;

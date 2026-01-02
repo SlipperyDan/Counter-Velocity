@@ -1,9 +1,7 @@
 {
-  "name": "Lunacy: The Axiom of Counter-Velocity",
-  "description": "A high-fidelity tactical companion for League of Legends that utilizes the Axioms of Value, Counter-Velocity, and Relative Gold Efficiency (RGE).",
+  "name": "Lunacy: Forensic Node",
+  "description": "A high-fidelity tactical forensic platform for League of Legends that utilizes the Axioms of Value and Relative Gold Efficiency (RGE) for post-mortem video analysis.",
   "requestFramePermissions": [
-    "camera",
-    "microphone",
-    "display-capture"
+    "microphone"
   ]
 }
