@@ -7,33 +7,48 @@ export enum Role {
   SUPPORT = 'SUPPORT'
 }
 
-export enum EnemyThreshold {
-  SQUISHY = 'SQUISHY', 
-  BRUISER = 'BRUISER', 
-  TANK = 'TANK'       
+export enum AxiomViolation {
+  TEMPO_LEAK = 'TEMPO_LEAK',
+  AXIOMATIC_DEFIANCE = 'AXIOMATIC_DEFIANCE',
+  ECONOMIC_INERTIA = 'ECONOMIC_INERTIA',
+  SPITE_FAILURE = 'SPITE_FAILURE',
+  TAX_ON_STUPIDITY = 'TAX_ON_STUPIDITY'
 }
 
-export interface ItemStat {
-  ad?: number;
-  ap?: number;
-  hp?: number;
-  armor?: number;
-  mr?: number;
-  ah?: number;
-  mana?: number;
-  as?: number;
-  crit?: number;
-  ms_flat?: number;
-  ms_percent?: number;
-  hsp?: number;
+export interface MetricPoint {
+  label: string;
+  value: string | number;
+  sub: string;
+  color?: string;
+  description?: string;
+}
+
+export interface FrictionEvent {
+  timestampSeconds: number;
+  frameIndex: number;
+  description: string;
+  axiomViolation: AxiomViolation;
 }
 
 export interface Item {
   id: string;
   name: string;
   cost: number;
-  stats: ItemStat;
-  passiveValue?: number;
+  stats: {
+    ad?: number;
+    ap?: number;
+    armor?: number;
+    mr?: number;
+    hp?: number;
+    ah?: number;
+    mana?: number;
+    as?: number;
+    crit?: number;
+    ms_flat?: number;
+    ms_percent?: number;
+    hsp?: number;
+  };
+  passiveValue: number;
   description: string;
   isRift: boolean;
   isARAM: boolean;
@@ -45,30 +60,15 @@ export interface Champion {
   baseBuild: string[];
 }
 
-export interface FrictionEvent {
-  timestampSeconds: number; 
-  frameIndex?: number;      
-  gameClock?: string;       
-  description: string;
-  axiomViolation: string;
-  screenshot?: string;      
-}
-
 export interface VideoTelemetry {
   championName: string;
   role: Role;
-  cr_observed: number; // Coefficient of Realized Gold (0.0 - 1.0)
-  t_build_estimate: number; // Minute mark for current item completion
-  mu_counter: number; // Spite/Counter Multiplier observed
+  cr_observed: number;
+  t_build_estimate: number;
+  mu_counter: number;
+  lane_leakage: number;
+  spite_score: number;
   frictionEvents: FrictionEvent[];
-  mathMetrics: {
-    rgeEstimate: number;
-    velocityHz: number;
-    frictionCoefficient: number;
-    goldHoarded: number;
-    spiteScore: number;
-    laneLeakage: number; // Gold lost to travel velocity (22s/32s rule)
-  };
   alternativeItems: {
     mistakenItem: string;
     superiorItem: string;
@@ -77,12 +77,11 @@ export interface VideoTelemetry {
   }[];
 }
 
+export type AxiomView = 'INITIALIZE' | 'RIOT_SYNC' | 'TREND_REPORT' | 'UPLOAD_PENDING' | 'INGESTION' | 'DEBRIEF';
+
 export interface AxiomState {
-  currentGold: number;
-  cr: number;
-  laneVelocity: number;
-  enemyDefensiveState: EnemyThreshold;
-  selectedChampion: Champion | null;
+  view: AxiomView;
   isAnalyzing: boolean;
-  view: 'UPLOAD' | 'AUDIT';
+  loadingMessage: string;
+  terminalLog: string[];
 }

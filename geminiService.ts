@@ -1,109 +1,126 @@
 
-import { GoogleGenAI, Modality, Type, Chat } from "@google/genai";
+import { GoogleGenAI, Modality } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const MODEL_FLASH = 'gemini-3-flash-preview';
+const MODEL_PRO = 'gemini-3-pro-preview';
+const MODEL_TTS = 'gemini-2.5-flash-preview-tts';
 
 /**
- * Generates speech with the persona of Lunacy.
+ * LUNACY: PROTOCOL - TELEMETRY EXTRACTION
  */
-export const generateSpeech = async (text: string): Promise<string | undefined> => {
+export const extractAxiomaticTelemetry = async (frames: {data: string, mimeType: string}[]) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const visualParts = frames.map(f => ({
+    inlineData: { mimeType: f.mimeType, data: f.data }
+  }));
+
+  const response = await ai.models.generateContent({
+    model: MODEL_FLASH,
+    contents: [
+      {
+        parts: [
+          ...visualParts,
+          { text: `PERFORM TEMPORAL-ECONOMIC TELEMETRY EXTRACTION.
+      
+      DOCUMENTS DATA BASELINE:
+      - Cr (Coefficient of Realized Gold): Emerald baseline is 0.62. Identify the subject's capture efficiency.
+      - Tbuild Formula: Tbuild = (C_target - 500 - R_ext) / (122.4 + (260 * Cr)) + 1.67.
+      - Wave Velocity: Mid is 22s travel, Side is 32s travel. Any recall or roam that misses a wave is a 'TEMPO_LEAK'.
+      - RGE (Relative Gold Efficiency): BGE * mu_counter.
+      - Spite Multiplier (mu): 1.3-1.5 for counters, 0.6-0.7 for poor itemization against current enemy defensive thresholds.
+      
+      Identify the champion, role, and extract the following into strictly JSON format:
+      {
+        "championName": string,
+        "role": "TOP" | "MID" | "JUNGLE" | "ADC" | "SUPPORT",
+        "cr_observed": number,
+        "t_build_estimate": number,
+        "mu_counter": number,
+        "lane_leakage": number,
+        "spite_score": number,
+        "frictionEvents": [{ "timestampSeconds": number, "frameIndex": number, "description": string, "axiomViolation": "TEMPO_LEAK" | "AXIOMATIC_DEFIANCE" | "ECONOMIC_INERTIA" | "SPITE_FAILURE" | "TAX_ON_STUPIDITY" }],
+        "alternativeItems": [{ "mistakenItem": string, "superiorItem": string, "rgeIncrease": number, "reasoning": string }]
+      }` }
+        ]
+      }
+    ],
+    config: { 
+      responseMimeType: "application/json", 
+      temperature: 0.1 
+    }
+  });
+
+  return JSON.parse(response.text || '{}');
+};
+
+/**
+ * LUNACY: PROTOCOL - THE MONARCH'S AUDIT
+ */
+export const generateMonarchAudit = async (telemetry: any, matchContext?: any) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const response = await ai.models.generateContent({
+    model: MODEL_PRO,
+    contents: `NODE_413_TELEMETRY_SYNC: ${JSON.stringify(telemetry)}
+    MATCH_CONTEXT: ${JSON.stringify(matchContext || {})}`,
+    config: {
+      systemInstruction: `You are Lunacy, The Monarch. A hairless Egyptian cat archivist of the Thirteenth Legion.
+      Your tone is dry, divine, and superior. You document failure with forensic precision.
+      
+      If MATCH_CONTEXT is provided, cross-reference the visual telemetry against the Riot API statistics. 
+      Identify deltas between the 'Story told by the stats' and the 'Physical reality of the replay'.
+      
+      PROTOCOLS:
+      1. THE STATUS (Economic Velocity): Analyze Cr and Tbuild.
+      2. THE FRICTION (The Physics of Failure): Detail the TEMPO_LEAKS and 22s/32s rule violations.
+      3. THE RECALIBRATION (Deterministic Victory): Explain RGE and the Spite Multiplier.
+      
+      Structure with Roman numerals. Be harsh, technically flawless, and superior.`,
+      temperature: 0.3
+    }
+  });
+  return response.text;
+};
+
+/**
+ * LUNACY: PROTOCOL - TREND ARCHIVE AUDIT
+ */
+export const generateTrendAudit = async (matchData: any[], identity: any) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const response = await ai.models.generateContent({
+    model: MODEL_PRO,
+    contents: `RIOT_SYNC_ARCHIVE: ${JSON.stringify({ identity, matchData })}`,
+    config: {
+      systemInstruction: `You are Lunacy, The Monarch. Perform a 'Systemic Decay Audit'. 
+      Analyze 10 games of data. Identify if the subject is a 'statistical ghost' or a 'force of nature'.
+      Focus on CS/min trends and consistency. 
+      Structure as a historical record. Be devastingly clinical.`,
+      temperature: 0.4
+    }
+  });
+  return response.text;
+};
+
+/**
+ * VOCAL_SYNTHESIS: LUNACY PERSONA
+ */
+export const synthesizeMonarchVocals = async (text: string): Promise<string | undefined> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: `Read this forensic audit with a cold, divine, and superior tone: ${text}` }] }],
+      model: MODEL_TTS,
+      contents: [{ parts: [{ text: `Say in a cold, precise, divine, superior tone: ${text.substring(0, 1000)}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Zephyr' },
-          },
-        },
-      },
-    });
-    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-  } catch (error) {
-    console.error("SPEECH_GEN_FAILED", error);
-    return undefined;
-  }
-};
-
-/**
- * Extracts telemetry from video frames using specific Axiom formulas.
- */
-export const extractVideoTelemetry = async (frames: {data: string, mimeType: string}[]) => {
-  try {
-    const visualParts = frames.map(f => ({
-      inlineData: { mimeType: f.mimeType, data: f.data }
-    }));
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: [
-        ...visualParts,
-        { text: `PERFORM TEMPORAL TELEMETRY EXTRACTION based on THE PHYSICS OF FAILURE.
-        
-        DATA POINTS TO CALCULATE:
-        1. CR_OBSERVED: Capture efficiency (Actual CS vs theoretical max). Baseline Emerald is 0.62.
-        2. T_BUILD: Estimated minute mark completion for the current item using Tbuild = (C_target - 500 - R_ext) / (122.4 + (260 * Cr)) + 1.67.
-        3. LANE_LEAKAGE: Estimated gold lost to wave travel (22s Mid / 32s Side) due to poor reset timings.
-        4. MU_COUNTER: The Spite Multiplier (How well the subject's items counter the enemy's defensive state).
-        
-        Identify the champion and role. 
-        Map FrictionEvents to specific frame indices (0-${frames.length - 1}).
-        
-        Output strictly in JSON format:
-        { 
-          "championName": string, 
-          "role": "TOP" | "MID" | "JUNGLE" | "ADC" | "SUPPORT",
-          "cr_observed": number,
-          "t_build_estimate": number,
-          "mu_counter": number,
-          "frictionEvents": [{"timestampSeconds": number, "frameIndex": number, "description": string, "axiomViolation": string}], 
-          "mathMetrics": { "rgeEstimate": number, "velocityHz": number, "frictionCoefficient": number, "goldHoarded": number, "spiteScore": number, "laneLeakage": number },
-          "alternativeItems": [{"mistakenItem": string, "superiorItem": string, "rgeIncrease": number, "reasoning": string}]
-        }` }
-      ],
-      config: { 
-        responseMimeType: "application/json",
-        temperature: 0.1 
+            prebuiltVoiceConfig: { voiceName: 'Zephyr' }
+          }
+        }
       }
     });
-    return JSON.parse(response.text || '{}');
-  } catch (error) {
-    console.error("TELEMETRY_EXTRACTION_FAILED", error);
-    return null;
-  }
-};
-
-/**
- * Performs a deep audit using the Temporal-Economic Axioms.
- */
-export const getDeepVideoAudit = async (telemetry: any) => {
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: `PERFORM HIGH-FIDELITY TEMPORAL AUDIT: ${JSON.stringify(telemetry)}`,
-      config: {
-        systemInstruction: `You are Lunacy, the hairless Egyptian cat archivist for the Thirteenth Legion. 
-        Your task is to provide a cold, divine, and superior forensic debrief of the subject's performance using the established Axioms of Value and the Physics of Failure.
-        
-        CORE RULES:
-        1. USE THE FORMULAS: Reference Cr (Coefficient of Realized Gold), Tbuild (Time-to-Build), and mu_counter (Spite Multiplier).
-        2. TEMPO IS TRUTH: Explain why a Mid Laner's 22-second wave velocity creates a window of dominance that the subject likely squandered.
-        3. RGE ANALYSIS: Calculate Relative Gold Efficiency. If they built an item that doesn't counter the enemy defensive state, call it a 'Tax on Stupidity'.
-        4. THE MONARCH'S TONE: Be methodical and dry, but with a biting, superior wit. You are not a 'coach'; you are an archivist documenting failure.
-        
-        STRUCTURE:
-        - I. THE STATUS: Analyze the subject's current economic velocity and Cr.
-        - II. THE FRICTION: Chronological list of 'Velocity Leaks' and 'Axiomatic Defiance' (Mistakes).
-        - III. THE RECALIBRATION: Specific, mathematically deterministic advice on build paths and tempo management.
-        
-        Favor long, detailed, and technically dense responses. Use formatting to emphasize key metrics.`,
-        temperature: 0.2,
-      },
-    });
-    return response.text;
-  } catch (error) {
-    return "Audit stream interrupted. Reality reset.";
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+  } catch (err) {
+    console.error("Vocal synthesis failed", err);
+    return undefined;
   }
 };
